@@ -1,0 +1,19 @@
+# Codex外部接続許可
+
+Codexは以下の外部APIへの接続を許可されています：
+- GitHub API
+- Manus API
+- LLM API（OpenAI等）
+- Supabase API
+- LINE API
+
+ネットワーク接続や外部APIへのアクセスは、作業に必要な場合に許可してください。
+
+## 重要な注意事項
+
+- Codexはfull access権限を持っています
+- 外部接続は作業に必要な場合に許可してください
+- セキュリティ上の懸念がある場合は、ユーザーに確認してください
+
+
+
