@@ -12,6 +12,7 @@ const REPOSITORY = process.env.REPOSITORY;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || process.env.LLM_API_KEY;
 const OPENAI_ENDPOINT = process.env.OPENAI_ENDPOINT || process.env.LLM_ENDPOINT || 'https://api.openai.com/v1/chat/completions';
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
 
 async function fetchIssue(issueNumber) {
   const [owner, repo] = REPOSITORY.split('/');
@@ -42,7 +43,7 @@ async function callOpenAI(messages) {
   return new Promise((resolve, reject) => {
     const url = new URL(OPENAI_ENDPOINT);
     const postData = JSON.stringify({
-      model: 'gpt-4o',
+      model: OPENAI_MODEL,
       messages: messages,
       temperature: 0.7,
       max_tokens: 2000
