@@ -50,8 +50,9 @@ jobs:
             printf '%s\n' '${{ toJson(github.event.client_payload) }}' > tmp/event.json
           else
             # workflow_dispatch: create a minimal test payload
-            jq -n '{
-              "event_id": "test-' + "$(date -u +%s)" + '",
+            TIMESTAMP=$(date -u +%s)
+            jq -n --arg ts "$TIMESTAMP" '{
+              "event_id": "test-\($ts)",
               "received_at": now | todateiso8601,
               "signature_valid": true,
               "dedupe_key": "test-dedupe-key",
