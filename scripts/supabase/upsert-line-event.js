@@ -148,6 +148,38 @@ export function buildLineMemberRecord(event) {
   };
 }
 
+function downgradeLineMemberRecord(record) {
+  const {
+    first_opt_in_at,
+    last_opt_in_at,
+    guardrail_sent_at,
+    consent_guardrail,
+    metadata = {},
+    ...rest
+  } = record;
+
+  const downgradedMetadata = { ...metadata };
+  const fallback = {
+    first_opt_in_at,
+    last_opt_in_at,
+    guardrail_sent_at,
+    consent_guardrail,
+  };
+
+  const entries = Object.entries(fallback).filter(([, value]) => value !== undefined && value !== null);
+  if (entries.length > 0) {
+    downgradedMetadata.supabase_missing_columns = {
+      ...(metadata.supabase_missing_columns || {}),
+      ...Object.fromEntries(entries),
+    };
+  }
+
+  return {
+    ...rest,
+    metadata: downgradedMetadata,
+  };
+}
+
 export function createLineDedupeKey({
   userHash,
   eventType,
@@ -206,18 +238,35 @@ export async function upsertSupabaseRecords({
   }
 
   if (memberRecords.length > 0) {
-    const resp = await fetch(
-      `${base}/rest/v1/line_members?on_conflict=user_hash`,
-      {
+    const requestBody = JSON.stringify(memberRecords);
+    const endpoint = `${base}/rest/v1/line_members?on_conflict=user_hash`;
+
+    const attempt = async (body, attemptLabel = 'primary') => {
+      const resp = await fetch(endpoint, {
         method: 'POST',
         headers,
-        body: JSON.stringify(memberRecords),
-      },
-    );
+        body,
+      });
+      const text = resp.ok ? '' : await resp.text();
+      return { resp, text, attemptLabel };
+    };
+
+    let { resp, text } = await attempt(requestBody);
+
+    if (!resp.ok && resp.status === 400 && text.includes("'first_opt_in_at'")) {
+      const downgradedRecords = memberRecords.map((record) =>
+        downgradeLineMemberRecord(record),
+      );
+      console.warn(
+        'Supabase line_members schema is missing columns (first_opt_in_at, etc). Retrying with downgraded payload.',
+      );
+      const downgradedBody = JSON.stringify(downgradedRecords);
+      ({ resp, text } = await attempt(downgradedBody, 'downgraded'));
+    }
+
     if (!resp.ok) {
-      const message = await resp.text();
       throw new Error(
-        `Supabase line_members upsert failed (${resp.status}): ${message}`,
+        `Supabase line_members upsert failed (${resp.status}): ${text}`,
       );
     }
   }
