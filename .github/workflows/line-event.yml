@@ -189,6 +189,7 @@ jobs:
           fi
 
       - name: Update Google Sheets ledger
+        continue-on-error: true
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
@@ -198,7 +199,10 @@ jobs:
             echo "ℹ️ Google Sheets credentials missing. Skipping ledger update."
             exit 0
           fi
-          node scripts/sheets/upsert-line-member.js tmp/event.json
+          node scripts/sheets/upsert-line-member.js tmp/event.json || {
+            echo "⚠️ Google Sheets update failed. This is non-critical."
+            exit 0
+          }
 
       - name: Dispatch to Manus (Development Only)
         if: vars.DEVELOPMENT_MODE == 'true' && vars.MANUS_ENABLED == 'true' && steps.mode.outputs.mode != 'degraded'
