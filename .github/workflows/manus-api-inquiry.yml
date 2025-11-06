@@ -27,11 +27,21 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Debug Secrets
+        run: |
+          echo "MANUS_API_KEY length: ${#MANUS_API_KEY}"
+          echo "MANUS_BASE_URL: ${MANUS_BASE_URL:-<not-set>}"
+        shell: bash
+        env:
+          MANUS_API_KEY: ${{ secrets.MANUS_API_KEY }}
+          MANUS_BASE_URL: ${{ vars.MANUS_BASE_URL }}
+
       - name: Run Manus API Inquiry
         id: inquiry
         continue-on-error: true
         env:
           MANUS_API_KEY: ${{ secrets.MANUS_API_KEY }}
+          MANUS_BASE_URL: ${{ vars.MANUS_BASE_URL }}
         run: |
           node scripts/manus/inquire-api.mjs
         working-directory: .
