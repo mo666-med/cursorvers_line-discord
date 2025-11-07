@@ -246,7 +246,9 @@ ${code}
           'Content-Type': 'application/json; charset=utf-8',
           'Content-Length': Buffer.byteLength(commentBody, 'utf8'),
           'User-Agent': 'Codex-Agent'
-        }
+        },
+        timeout: 30000,
+        agent: false
       }, (res) => {
         // UTF-8エンコーディングを明示的に設定
         res.setEncoding('utf8');
@@ -259,11 +261,28 @@ ${code}
           if (res.statusCode >= 200 && res.statusCode < 300) {
             resolve();
           } else {
-            reject(new Error(`GitHub API error: ${res.statusCode} ${data}`));
+            reject(new Error(`GitHub API error: ${res.statusCode} ${data.substring(0, 500)}`));
           }
         });
       });
-      req.on('error', reject);
+      
+      req.on('error', (error) => {
+        // ネットワークエラーの詳細を提供
+        if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+          reject(new Error(`GitHub API接続エラー: ${error.code} - ${error.message}\n` +
+            `URL: ${commentUrl}\n` +
+            `ネットワーク接続を確認してください。`));
+        } else {
+          reject(new Error(`GitHub API接続エラー: ${error.message}`));
+        }
+      });
+      
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error(`GitHub API接続タイムアウト: ${commentUrl}`));
+      });
+      
+      req.setTimeout(30000);
       req.write(commentBody);
       req.end();
     });
@@ -277,4 +296,5 @@ ${code}
 }
 
 main();
+
 
