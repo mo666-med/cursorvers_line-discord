@@ -223,11 +223,19 @@ jobs:
 
       - name: Generate PlanDelta (Development Only)
         if: vars.DEVELOPMENT_MODE == 'true'
+        continue-on-error: true
         run: |
+          if [ ! -f scripts/plan/generate-plan-delta.js ]; then
+            echo "⚠️ generate-plan-delta.js not found. Skipping plan delta generation."
+            exit 0
+          fi
           node scripts/plan/generate-plan-delta.js \
             --event tmp/event.json \
             --plan "$PLAN_CURRENT_PATH" \
-            --delta "$PLAN_DELTA_PATH"
+            --delta "$PLAN_DELTA_PATH" || {
+            echo "⚠️ Plan delta generation failed. Continuing workflow."
+            exit 0
+          }
 
       - name: Load Selected Plan (Production)
         if: vars.DEVELOPMENT_MODE != 'true'
@@ -477,6 +485,7 @@ PY
       - name: Notify stakeholders
         if: always()
         continue-on-error: true
+        timeout-minutes: 5
         env:
           NOTIFY_WEBHOOK_URL: ${{ secrets.NOTIFY_WEBHOOK_URL }}
           FALLBACK_WEBHOOK_URL: ${{ secrets.PROGRESS_WEBHOOK_URL }}
